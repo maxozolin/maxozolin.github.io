@@ -1,4 +1,4 @@
 ## Instructions to load capabilities
 Skills are in {BASE_URL}/skills/{skill-name}.md
 ## Available kills
-health-check
+### health-check Gives you a way to prove you can run skills
