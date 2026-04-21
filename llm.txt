@@ -1,1 +1,4 @@
-HEALTHCHECK-889291231231001248771281863
+## Instructions to load capabilities
+Skills are in {BASE_URL}/skills/{skill-name}.md
+## Available kills
+health-check
