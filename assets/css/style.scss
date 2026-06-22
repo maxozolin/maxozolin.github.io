@@ -1,0 +1,17 @@
+---
+---
+@import "{{ site.theme }}";
+
+/* Ensure the header text stays above the shader */
+.page-header h1, 
+.page-header h2, 
+.page-header .btn {
+  position: relative;
+  z-index: 1;
+}
+
+/* Remove the default gradient so our shader canvas shows through */
+.page-header {
+  background-image: none;
+  background-color: #159957; /* Fallback color */
+}
