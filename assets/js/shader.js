@@ -46,7 +46,7 @@ class Particle {
         this.mass = this.size * 2.0;
     }
     
-    update() {
+    update(time) {
         let dx = this.x - mouse.x;
         let dy = this.y - mouse.y;
         let distance = Math.sqrt(dx * dx + dy * dy);
@@ -57,34 +57,31 @@ class Particle {
             let forceDirectionX = dx / distance;
             let forceDirectionY = dy / distance;
             let force = Math.pow((swatRadius - distance) / swatRadius, 2);
-            let swatX = mouse.vx * 0.2;
-            let swatY = mouse.vy * 0.2;
+            let swatX = mouse.vx * 0.3; // Increased swat influence slightly
+            let swatY = mouse.vy * 0.3;
 
-            this.vx += (forceDirectionX * force * 2.0 + swatX) / this.mass;
-            this.vy += (forceDirectionY * force * 2.0 + swatY) / this.mass;
+            this.vx += (forceDirectionX * force * 4.0 + swatX) / this.mass;
+            this.vy += (forceDirectionY * force * 4.0 + swatY) / this.mass;
         }
         
-        let dxOrigin = this.originX - this.x;
-        let dyOrigin = this.originY - this.y;
-        let distFromOrigin = Math.sqrt(dxOrigin * dxOrigin + dyOrigin * dyOrigin);
-        
-        // Dynamic Spring Physics: 
-        // Base strength is very low for floaty movement.
-        // As it gets pushed further away (creating a void), the spring tension multiplies to snap it back.
-        let baseSpring = 0.003;
-        // Reduced the tension multiplier significantly so it doesn't snap back as violently
-        let tensionMultiplier = (distFromOrigin > 50) ? (distFromOrigin - 50) * 0.00015 : 0;
-        let springStrength = baseSpring + tensionMultiplier;
-        
-        this.vx += dxOrigin * springStrength;
-        this.vy += dyOrigin * springStrength;
-        
-        // Increased friction slightly to dampen the oscillation/bounciness when it rushes back
-        this.vx *= 0.92; 
-        this.vy *= 0.92;
+        // Heavy fluid friction (dampens momentum quickly)
+        this.vx *= 0.80; 
+        this.vy *= 0.80;
         
         this.x += this.vx;
         this.y += this.vy;
+        
+        // Gentle fluid currents (makes the entire web breathe and warp like water)
+        let waveX = Math.sin(this.originY * 0.01 + time * 0.5) * 15;
+        let waveY = Math.cos(this.originX * 0.01 + time * 0.5) * 15;
+        
+        let targetX = this.originX + waveX;
+        let targetY = this.originY + waveY;
+        
+        // Viscous Ooze: Move directly towards the target without accumulating momentum.
+        // This eliminates ALL bouncing/springiness and creates a thick gel/fluid feeling.
+        this.x += (targetX - this.x) * 0.03;
+        this.y += (targetY - this.y) * 0.03;
     }
     
     draw() {
@@ -145,7 +142,10 @@ function resize() {
 window.addEventListener('resize', resize);
 window.addEventListener('load', resize);
 
-function animate() {
+function animate(time) {
+    if (isNaN(time)) time = 0;
+    time *= 0.001; // Convert to seconds
+
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.lineWidth = 1.0; 
     
@@ -197,7 +197,7 @@ function animate() {
     ctx.globalAlpha = 1.0;
 
     for (let i = 0; i < particles.length; i++) {
-        particles[i].update();
+        particles[i].update(time);
         particles[i].draw();
     }
     
