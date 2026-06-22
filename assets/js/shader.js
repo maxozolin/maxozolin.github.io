@@ -61,15 +61,17 @@ class Particle {
             this.vy += (forceDirectionY * force * 2.0 + swatY) / this.mass;
         }
         
-        let springStrength = 0.02;
+        // Lower spring strength means it pulls back much slower and gentler
+        let springStrength = 0.003;
         let dxOrigin = this.originX - this.x;
         let dyOrigin = this.originY - this.y;
         
         this.vx += dxOrigin * springStrength;
         this.vy += dyOrigin * springStrength;
         
-        this.vx *= 0.85; 
-        this.vy *= 0.85;
+        // Slightly higher multiplier means LESS friction, letting them glide longer before stopping
+        this.vx *= 0.94; 
+        this.vy *= 0.94;
         
         this.x += this.vx;
         this.y += this.vy;
