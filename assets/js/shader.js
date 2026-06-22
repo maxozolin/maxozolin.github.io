@@ -2,15 +2,11 @@ const canvas = document.getElementById('shader-canvas');
 const ctx = canvas.getContext('2d');
 
 let particles = [];
-
-// Uniform, cohesive color for a clean, minimalist look. 
-// We use a crisp, bright white/silver for all nodes.
-const nodeColor = 'rgba(248, 250, 252, 1.0)'; // Slate 50
+const nodeColor = 'rgba(248, 250, 252, 0.9)'; 
 
 let mouse = { x: -1000, y: -1000, vx: 0, vy: 0 };
 let lastMouse = { x: -1000, y: -1000 };
 
-// Track mouse and velocity
 window.addEventListener('mousemove', (e) => {
     const rect = canvas.getBoundingClientRect();
     lastMouse.x = mouse.x;
@@ -23,7 +19,6 @@ window.addEventListener('mousemove', (e) => {
     mouse.vy = mouse.y - lastMouse.y;
 });
 
-// Decelerate mouse velocity
 setInterval(() => {
     mouse.vx *= 0.5;
     mouse.vy *= 0.5;
@@ -36,15 +31,15 @@ window.addEventListener('mouseleave', () => {
 
 class Particle {
     constructor(x, y) {
+        // Current actual position
         this.x = x;
         this.y = y;
         
-        // Uniform, slightly larger size so they read clearly as nodes
-        this.size = Math.random() * 1.5 + 1.5; 
+        // Target anchor position (the grid intersection)
+        this.originX = x;
+        this.originY = y;
         
-        // Very slow, elegant drift
-        this.baseVx = (Math.random() - 0.5) * 0.15;
-        this.baseVy = (Math.random() - 0.5) * 0.15;
+        this.size = 2.0; 
         
         this.vx = 0;
         this.vy = 0;
@@ -56,32 +51,37 @@ class Particle {
         let dy = this.y - mouse.y;
         let distance = Math.sqrt(dx * dx + dy * dy);
         
-        let swatRadius = 150; 
+        let swatRadius = 200; // Increased interaction radius
         
+        // 1. Mouse Swat Repulsion
         if (distance < swatRadius) {
             let forceDirectionX = dx / distance;
             let forceDirectionY = dy / distance;
             
             let force = Math.pow((swatRadius - distance) / swatRadius, 2);
             
-            let swatX = mouse.vx * 0.15;
-            let swatY = mouse.vy * 0.15;
+            let swatX = mouse.vx * 0.2;
+            let swatY = mouse.vy * 0.2;
 
-            this.vx += (forceDirectionX * force * 1.5 + swatX) / this.mass;
-            this.vy += (forceDirectionY * force * 1.5 + swatY) / this.mass;
+            this.vx += (forceDirectionX * force * 2.0 + swatX) / this.mass;
+            this.vy += (forceDirectionY * force * 2.0 + swatY) / this.mass;
         }
         
-        this.vx *= 0.90;
-        this.vy *= 0.90;
+        // 2. Grid Snap (Spring Physics)
+        // This constantly pulls the particle back to its original grid anchor
+        let springStrength = 0.02;
+        let dxOrigin = this.originX - this.x;
+        let dyOrigin = this.originY - this.y;
         
-        this.x += this.vx + this.baseVx;
-        this.y += this.vy + this.baseVy;
+        this.vx += dxOrigin * springStrength;
+        this.vy += dyOrigin * springStrength;
         
-        // Wrap edges
-        if (this.x < -20) this.x = canvas.width + 20;
-        if (this.x > canvas.width + 20) this.x = -20;
-        if (this.y < -20) this.y = canvas.height + 20;
-        if (this.y > canvas.height + 20) this.y = -20;
+        // Friction / Damping
+        this.vx *= 0.85; // Lower friction means more springy/bouncy
+        this.vy *= 0.85;
+        
+        this.x += this.vx;
+        this.y += this.vy;
     }
     
     draw() {
@@ -94,15 +94,29 @@ class Particle {
 
 function init() {
     particles = [];
-    // Slightly higher density so the connections form a better web
-    let numParticles = Math.floor((canvas.width * canvas.height) / 10000);
-    if (numParticles > 140) numParticles = 140;
-    if (numParticles < 40) numParticles = 40;
     
-    for (let i = 0; i < numParticles; i++) {
-        let x = Math.random() * canvas.width;
-        let y = Math.random() * canvas.height;
-        particles.push(new Particle(x, y));
+    // Create a strict grid layout instead of random placement
+    const spacing = 80; // Distance between grid nodes
+    
+    // Calculate how many rows/cols fit in the canvas
+    const cols = Math.ceil(canvas.width / spacing) + 1;
+    const rows = Math.ceil(canvas.height / spacing) + 1;
+    
+    // Offset to center the grid
+    const offsetX = (canvas.width - (cols - 1) * spacing) / 2;
+    const offsetY = (canvas.height - (rows - 1) * spacing) / 2;
+    
+    for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+            // Add a tiny bit of random jitter so it doesn't look *too* perfectly rigid
+            let jitterX = (Math.random() - 0.5) * 10;
+            let jitterY = (Math.random() - 0.5) * 10;
+            
+            let x = c * spacing + offsetX + jitterX;
+            let y = r * spacing + offsetY + jitterY;
+            
+            particles.push(new Particle(x, y));
+        }
     }
 }
 
@@ -117,7 +131,6 @@ window.addEventListener('resize', resize);
 function animate() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // Thicker, more visible connecting lines
     ctx.lineWidth = 1.0; 
     
     for (let a = 0; a < particles.length; a++) {
@@ -126,28 +139,29 @@ function animate() {
             let dy = particles[a].y - particles[b].y;
             let distance = Math.sqrt(dx * dx + dy * dy);
             
-            // Increased connection distance slightly so the web is more cohesive
-            if (distance < 120) {
+            // Increased connection distance
+            if (distance < 150) {
                 ctx.beginPath();
                 ctx.strokeStyle = '#ffffff';
-                // Increased base opacity for much clearer connections
-                ctx.globalAlpha = 0.35 * (1 - distance / 120);
+                ctx.globalAlpha = 0.4 * (1 - distance / 150);
                 ctx.moveTo(particles[a].x, particles[a].y);
                 ctx.lineTo(particles[b].x, particles[b].y);
                 ctx.stroke();
             }
         }
         
-        // Mouse connection lines
+        // Much stronger magnetic mouse connection
         let mdx = particles[a].x - mouse.x;
         let mdy = particles[a].y - mouse.y;
         let mDistance = Math.sqrt(mdx * mdx + mdy * mdy);
         
-        if (mDistance < 140) {
+        // Grab from much further away
+        if (mDistance < 250) {
             ctx.beginPath();
-            // Changed mouse connection to uniform white/gray instead of teal to keep the palette clean
             ctx.strokeStyle = '#ffffff'; 
-            ctx.globalAlpha = 0.25 * (1 - mDistance / 140);
+            // Much brighter connection lines to the mouse
+            ctx.globalAlpha = 0.5 * (1 - mDistance / 250);
+            
             ctx.moveTo(particles[a].x, particles[a].y);
             ctx.lineTo(mouse.x, mouse.y);
             ctx.stroke();
