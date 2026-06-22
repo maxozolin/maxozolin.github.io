@@ -1,4 +1,7 @@
-# Welcome to My Personal Website!
+---
+title: Max Ozolin
+---
+# Welcome
 
 Hi, I'm a developer/designer based in the universe. 
 
