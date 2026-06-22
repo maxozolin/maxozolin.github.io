@@ -3,14 +3,9 @@ const ctx = canvas.getContext('2d');
 
 let particles = [];
 
-// Minimalistic Palette: Mostly varied opacities of white, with a rare subtle teal accent
-const colors = [
-    'rgba(255, 255, 255, 0.8)',
-    'rgba(255, 255, 255, 0.5)',
-    'rgba(255, 255, 255, 0.2)',
-    'rgba(255, 255, 255, 0.1)',
-    'rgba(45, 212, 191, 0.9)' // Teal accent
-];
+// Uniform, cohesive color for a clean, minimalist look. 
+// We use a crisp, bright white/silver for all nodes.
+const nodeColor = 'rgba(248, 250, 252, 1.0)'; // Slate 50
 
 let mouse = { x: -1000, y: -1000, vx: 0, vy: 0 };
 let lastMouse = { x: -1000, y: -1000 };
@@ -44,25 +39,16 @@ class Particle {
         this.x = x;
         this.y = y;
         
-        // Smaller, more refined particle sizes
-        this.size = Math.random() * 1.5 + 0.5; 
+        // Uniform, slightly larger size so they read clearly as nodes
+        this.size = Math.random() * 1.5 + 1.5; 
         
-        // Slower, more elegant base drift
-        this.baseVx = (Math.random() - 0.5) * 0.2;
-        this.baseVy = (Math.random() - 0.5) * 0.2;
+        // Very slow, elegant drift
+        this.baseVx = (Math.random() - 0.5) * 0.15;
+        this.baseVy = (Math.random() - 0.5) * 0.15;
         
         this.vx = 0;
         this.vy = 0;
-        
-        // 90% chance to be white/gray, 10% chance to be the accent color
-        if (Math.random() > 0.9) {
-            this.color = colors[4];
-            this.size *= 1.5; // Accent particles are slightly larger
-        } else {
-            this.color = colors[Math.floor(Math.random() * 4)];
-        }
-        
-        this.mass = this.size * 1.5;
+        this.mass = this.size * 2.0;
     }
     
     update() {
@@ -70,31 +56,28 @@ class Particle {
         let dy = this.y - mouse.y;
         let distance = Math.sqrt(dx * dx + dy * dy);
         
-        let swatRadius = 150; // Interaction radius
+        let swatRadius = 150; 
         
         if (distance < swatRadius) {
             let forceDirectionX = dx / distance;
             let forceDirectionY = dy / distance;
             
-            // Smoother force curve
             let force = Math.pow((swatRadius - distance) / swatRadius, 2);
             
             let swatX = mouse.vx * 0.15;
             let swatY = mouse.vy * 0.15;
 
-            // Apply force
             this.vx += (forceDirectionX * force * 1.5 + swatX) / this.mass;
             this.vy += (forceDirectionY * force * 1.5 + swatY) / this.mass;
         }
         
-        // Friction - higher means they stop sliding sooner (more controlled)
         this.vx *= 0.90;
         this.vy *= 0.90;
         
         this.x += this.vx + this.baseVx;
         this.y += this.vy + this.baseVy;
         
-        // Wrap edges instead of bouncing for a continuous infinite feel
+        // Wrap edges
         if (this.x < -20) this.x = canvas.width + 20;
         if (this.x > canvas.width + 20) this.x = -20;
         if (this.y < -20) this.y = canvas.height + 20;
@@ -104,17 +87,17 @@ class Particle {
     draw() {
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-        ctx.fillStyle = this.color;
+        ctx.fillStyle = nodeColor;
         ctx.fill();
     }
 }
 
 function init() {
     particles = [];
-    // Slightly lower density for a minimalist look
-    let numParticles = Math.floor((canvas.width * canvas.height) / 12000);
-    if (numParticles > 120) numParticles = 120;
-    if (numParticles < 30) numParticles = 30;
+    // Slightly higher density so the connections form a better web
+    let numParticles = Math.floor((canvas.width * canvas.height) / 10000);
+    if (numParticles > 140) numParticles = 140;
+    if (numParticles < 40) numParticles = 40;
     
     for (let i = 0; i < numParticles; i++) {
         let x = Math.random() * canvas.width;
@@ -134,8 +117,8 @@ window.addEventListener('resize', resize);
 function animate() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // Draw connecting lines
-    ctx.lineWidth = 0.5; // Ultra-thin lines
+    // Thicker, more visible connecting lines
+    ctx.lineWidth = 1.0; 
     
     for (let a = 0; a < particles.length; a++) {
         for (let b = a + 1; b < particles.length; b++) {
@@ -143,26 +126,28 @@ function animate() {
             let dy = particles[a].y - particles[b].y;
             let distance = Math.sqrt(dx * dx + dy * dy);
             
-            if (distance < 100) {
+            // Increased connection distance slightly so the web is more cohesive
+            if (distance < 120) {
                 ctx.beginPath();
                 ctx.strokeStyle = '#ffffff';
-                // Extremely subtle line opacity
-                ctx.globalAlpha = 0.15 * (1 - distance / 100);
+                // Increased base opacity for much clearer connections
+                ctx.globalAlpha = 0.35 * (1 - distance / 120);
                 ctx.moveTo(particles[a].x, particles[a].y);
                 ctx.lineTo(particles[b].x, particles[b].y);
                 ctx.stroke();
             }
         }
         
-        // Connect particles to mouse if close (adds an engaging "magnetic" feel)
+        // Mouse connection lines
         let mdx = particles[a].x - mouse.x;
         let mdy = particles[a].y - mouse.y;
         let mDistance = Math.sqrt(mdx * mdx + mdy * mdy);
         
-        if (mDistance < 120) {
+        if (mDistance < 140) {
             ctx.beginPath();
-            ctx.strokeStyle = '#2dd4bf'; // Magnetic lines to mouse are teal
-            ctx.globalAlpha = 0.2 * (1 - mDistance / 120);
+            // Changed mouse connection to uniform white/gray instead of teal to keep the palette clean
+            ctx.strokeStyle = '#ffffff'; 
+            ctx.globalAlpha = 0.25 * (1 - mDistance / 140);
             ctx.moveTo(particles[a].x, particles[a].y);
             ctx.lineTo(mouse.x, mouse.y);
             ctx.stroke();
