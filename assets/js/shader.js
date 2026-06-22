@@ -72,14 +72,16 @@ class Particle {
         // Base strength is very low for floaty movement.
         // As it gets pushed further away (creating a void), the spring tension multiplies to snap it back.
         let baseSpring = 0.003;
-        let tensionMultiplier = (distFromOrigin > 50) ? (distFromOrigin - 50) * 0.0005 : 0;
+        // Reduced the tension multiplier significantly so it doesn't snap back as violently
+        let tensionMultiplier = (distFromOrigin > 50) ? (distFromOrigin - 50) * 0.00015 : 0;
         let springStrength = baseSpring + tensionMultiplier;
         
         this.vx += dxOrigin * springStrength;
         this.vy += dyOrigin * springStrength;
         
-        this.vx *= 0.94; 
-        this.vy *= 0.94;
+        // Increased friction slightly to dampen the oscillation/bounciness when it rushes back
+        this.vx *= 0.92; 
+        this.vy *= 0.92;
         
         this.x += this.vx;
         this.y += this.vy;
