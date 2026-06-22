@@ -1,8 +1,6 @@
 const canvas = document.getElementById('shader-canvas');
 const ctx = canvas.getContext('2d');
-
-// Grab the header content wrapper so we can move it
-const headerContent = document.querySelector('.page-header > div');
+const headerContent = document.getElementById('header-content-wrapper');
 
 let particles = [];
 const nodeColor = 'rgba(248, 250, 252, 0.9)'; 
@@ -89,6 +87,9 @@ class Particle {
 function init() {
     particles = [];
     
+    // Ensure we don't try to calculate a grid if dimensions are not loaded
+    if (canvas.width === 0 || canvas.height === 0) return;
+    
     const spacing = 80; 
     const cols = Math.ceil(canvas.width / spacing) + 1;
     const rows = Math.ceil(canvas.height / spacing) + 1;
@@ -110,41 +111,30 @@ function init() {
 }
 
 function resize() {
-    canvas.width = canvas.clientWidth;
-    canvas.height = canvas.clientHeight;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width || canvas.clientWidth || window.innerWidth;
+    canvas.height = rect.height || canvas.clientHeight || 400; // Fallback height
     init();
 }
 
 window.addEventListener('resize', resize);
+// Guarantee sizing kicks in after layout is complete
+window.addEventListener('load', resize);
 
-// Variables to handle the smoothed motion of the text
-let textOffsetX = 0;
-let textOffsetY = 0;
+// Standalone Text Physics Variables
+let textX = 0;
+let textY = 0;
+let textVx = 0;
+let textVy = 0;
+const textMass = 15.0; // The text is heavier than grid nodes
 
 function animate() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
     ctx.lineWidth = 1.0; 
     
-    // Calculate the center of the canvas
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
-    
-    // We will measure how much the particles near the center are displaced
-    let totalDisplacementX = 0;
-    let totalDisplacementY = 0;
-    let particlesCounted = 0;
-    
     for (let a = 0; a < particles.length; a++) {
         let p = particles[a];
-        
-        // Measure displacement for particles near the center of the screen
-        let distFromCenter = Math.sqrt(Math.pow(p.originX - centerX, 2) + Math.pow(p.originY - centerY, 2));
-        if (distFromCenter < 300) {
-            totalDisplacementX += (p.x - p.originX);
-            totalDisplacementY += (p.y - p.originY);
-            particlesCounted++;
-        }
         
         for (let b = a + 1; b < particles.length; b++) {
             let dx = p.x - particles[b].x;
@@ -183,24 +173,51 @@ function animate() {
         particles[i].draw();
     }
     
-    // Apply the displacement to the HTML text element
-    if (headerContent && particlesCounted > 0) {
-        // Average the displacement of the central particles
-        let avgDx = totalDisplacementX / particlesCounted;
-        let avgDy = totalDisplacementY / particlesCounted;
+    // Apply Standalone Physics to the HTML Text
+    if (headerContent) {
+        let centerX = canvas.width / 2;
+        let centerY = canvas.height / 2;
         
-        // Smoothly interpolate the text movement (spring-like text following)
-        textOffsetX += (avgDx - textOffsetX) * 0.2;
-        textOffsetY += (avgDy - textOffsetY) * 0.2;
+        // Calculate mouse distance from the text's physical location
+        let mdx = (centerX + textX) - mouse.x;
+        let mdy = (centerY + textY) - mouse.y;
+        let mDistance = Math.sqrt(mdx * mdx + mdy * mdy);
         
-        // Apply the CSS transform to physically move the text layer
-        headerContent.style.transform = \`translate(\${textOffsetX}px, \${textOffsetY}px)\`;
+        let textSwatRadius = 300; // Increased radius to ensure mouse affects the large text block
+        
+        if (mDistance < textSwatRadius) {
+            let forceDirectionX = mdx / mDistance;
+            let forceDirectionY = mdy / mDistance;
+            
+            // Same smooth repulsion curve
+            let force = Math.pow((textSwatRadius - mDistance) / textSwatRadius, 2);
+            
+            let swatX = mouse.vx * 0.2;
+            let swatY = mouse.vy * 0.2;
+
+            textVx += (forceDirectionX * force * 5.0 + swatX) / textMass;
+            textVy += (forceDirectionY * force * 5.0 + swatY) / textMass;
+        }
+        
+        // Spring physics pulling the text back to its center origin (0,0 offset)
+        let textSpringStrength = 0.02;
+        textVx += (0 - textX) * textSpringStrength;
+        textVy += (0 - textY) * textSpringStrength;
+        
+        // Friction/Damping
+        textVx *= 0.85;
+        textVy *= 0.85;
+        
+        textX += textVx;
+        textY += textVy;
+        
+        // Apply the physical movement via CSS
+        headerContent.style.transform = `translate(${textX}px, ${textY}px)`;
     }
     
     requestAnimationFrame(animate);
 }
 
-setTimeout(() => {
-    resize();
-    animate();
-}, 50);
+// Initial boot
+resize();
+animate();
