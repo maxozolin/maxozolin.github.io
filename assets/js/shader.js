@@ -11,10 +11,8 @@ window.addEventListener('mousemove', (e) => {
     const rect = canvas.getBoundingClientRect();
     lastMouse.x = mouse.x;
     lastMouse.y = mouse.y;
-    
     mouse.x = e.clientX - rect.left;
     mouse.y = e.clientY - rect.top;
-    
     mouse.vx = mouse.x - lastMouse.x;
     mouse.vy = mouse.y - lastMouse.y;
 });
@@ -29,13 +27,20 @@ window.addEventListener('mouseleave', () => {
     mouse.y = -1000;
 });
 
+// Hexagon Configuration
+const HEX_RADIUS = 50; 
+// To form perfect hexagons, we only connect nearest neighbors (distance = HEX_RADIUS).
+// We set the threshold slightly higher to account for organic jitter.
+const CONNECTION_DISTANCE = HEX_RADIUS * 1.45; 
+
 class Particle {
     constructor(x, y) {
         this.x = x;
         this.y = y;
         this.originX = x;
         this.originY = y;
-        this.size = 5.0; // Needs to be significantly larger for the hexagonal points to not sub-pixel blend into a circle
+        // Using elegant dots for the vertices of the hexagons
+        this.size = 2.5; 
         this.vx = 0;
         this.vy = 0;
         this.mass = this.size * 2.0;
@@ -51,9 +56,7 @@ class Particle {
         if (distance < swatRadius) {
             let forceDirectionX = dx / distance;
             let forceDirectionY = dy / distance;
-            
             let force = Math.pow((swatRadius - distance) / swatRadius, 2);
-            
             let swatX = mouse.vx * 0.2;
             let swatY = mouse.vy * 0.2;
 
@@ -61,7 +64,6 @@ class Particle {
             this.vy += (forceDirectionY * force * 2.0 + swatY) / this.mass;
         }
         
-        // Lower spring strength means it pulls back much slower and gentler
         let springStrength = 0.003;
         let dxOrigin = this.originX - this.x;
         let dyOrigin = this.originY - this.y;
@@ -69,7 +71,6 @@ class Particle {
         this.vx += dxOrigin * springStrength;
         this.vy += dyOrigin * springStrength;
         
-        // Slightly higher multiplier means LESS friction, letting them glide longer before stopping
         this.vx *= 0.94; 
         this.vy *= 0.94;
         
@@ -79,19 +80,7 @@ class Particle {
     
     draw() {
         ctx.beginPath();
-        const sides = 6;
-        for (let i = 0; i < sides; i++) {
-            // Pointy-topped hexagon
-            const angle = (i * 2 * Math.PI / sides) - (Math.PI / 2);
-            const px = this.x + this.size * Math.cos(angle);
-            const py = this.y + this.size * Math.sin(angle);
-            if (i === 0) {
-                ctx.moveTo(px, py);
-            } else {
-                ctx.lineTo(px, py);
-            }
-        }
-        ctx.closePath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
         ctx.fillStyle = nodeColor;
         ctx.fill();
     }
@@ -99,26 +88,40 @@ class Particle {
 
 function init() {
     particles = [];
-    
-    // Ensure we don't try to calculate a grid if dimensions are not loaded
     if (canvas.width === 0 || canvas.height === 0) return;
     
-    const spacing = 80; 
-    const cols = Math.ceil(canvas.width / spacing) + 1;
-    const rows = Math.ceil(canvas.height / spacing) + 1;
+    // Mathematical generation of a true Honeycomb / Hexagonal lattice
+    const hexWidth = Math.sqrt(3) * HEX_RADIUS;
+    const ySpacing = 1.5 * HEX_RADIUS;
     
-    const offsetX = (canvas.width - (cols - 1) * spacing) / 2;
-    const offsetY = (canvas.height - (rows - 1) * spacing) / 2;
+    const cols = Math.ceil(canvas.width / hexWidth) + 2;
+    const rows = Math.ceil(canvas.height / ySpacing) + 2;
     
-    for (let r = 0; r < rows; r++) {
-        for (let c = 0; c < cols; c++) {
-            let jitterX = (Math.random() - 0.5) * 10;
-            let jitterY = (Math.random() - 0.5) * 10;
+    const offsetX = (canvas.width - (cols - 1) * hexWidth) / 2;
+    const offsetY = (canvas.height - (rows - 1) * ySpacing) / 2;
+    
+    for (let row = -2; row <= rows; row++) {
+        for (let col = -2; col <= cols; col++) {
+            // Offset odd rows to interlock the hexagons
+            let xOffset = (row % 2 !== 0) ? hexWidth / 2 : 0;
             
-            let x = c * spacing + offsetX + jitterX;
-            let y = r * spacing + offsetY + jitterY;
+            // A hexagon requires two vertices per grid coordinate
+            let x1 = col * hexWidth + xOffset + offsetX;
+            let y1 = row * ySpacing + offsetY;
             
-            particles.push(new Particle(x, y));
+            let x2 = x1;
+            let y2 = y1 + HEX_RADIUS;
+            
+            // Add a small amount of jitter so it feels organic, 
+            // but not so much that the hexagons lose their shape.
+            let jitter = 10;
+            let jx1 = (Math.random() - 0.5) * jitter;
+            let jy1 = (Math.random() - 0.5) * jitter;
+            let jx2 = (Math.random() - 0.5) * jitter;
+            let jy2 = (Math.random() - 0.5) * jitter;
+            
+            particles.push(new Particle(x1 + jx1, y1 + jy1));
+            particles.push(new Particle(x2 + jx2, y2 + jy2));
         }
     }
 }
@@ -126,17 +129,15 @@ function init() {
 function resize() {
     const rect = canvas.getBoundingClientRect();
     canvas.width = rect.width || canvas.clientWidth || window.innerWidth;
-    canvas.height = rect.height || canvas.clientHeight || 400; // Fallback height
+    canvas.height = rect.height || canvas.clientHeight || 400;
     init();
 }
 
 window.addEventListener('resize', resize);
-// Guarantee sizing kicks in after layout is complete
 window.addEventListener('load', resize);
 
 function animate() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
     ctx.lineWidth = 1.0; 
     
     for (let a = 0; a < particles.length; a++) {
@@ -147,16 +148,18 @@ function animate() {
             let dy = p.y - particles[b].y;
             let distance = Math.sqrt(dx * dx + dy * dy);
             
-            if (distance < 150) {
+            // Only connect the nearest neighbors to mathematically form hexagons
+            if (distance < CONNECTION_DISTANCE) {
                 ctx.beginPath();
                 ctx.strokeStyle = '#ffffff';
-                ctx.globalAlpha = 0.4 * (1 - distance / 150);
+                ctx.globalAlpha = 0.5 * (1 - distance / CONNECTION_DISTANCE);
                 ctx.moveTo(p.x, p.y);
                 ctx.lineTo(particles[b].x, particles[b].y);
                 ctx.stroke();
             }
         }
         
+        // Mouse connection lines
         let mdx = p.x - mouse.x;
         let mdy = p.y - mouse.y;
         let mDistance = Math.sqrt(mdx * mdx + mdy * mdy);
@@ -165,7 +168,6 @@ function animate() {
             ctx.beginPath();
             ctx.strokeStyle = '#ffffff'; 
             ctx.globalAlpha = 0.5 * (1 - mDistance / 250);
-            
             ctx.moveTo(p.x, p.y);
             ctx.lineTo(mouse.x, mouse.y);
             ctx.stroke();
@@ -182,6 +184,5 @@ function animate() {
     requestAnimationFrame(animate);
 }
 
-// Initial boot
 resize();
 animate();
