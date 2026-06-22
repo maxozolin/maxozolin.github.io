@@ -140,6 +140,8 @@ function animate() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.lineWidth = 1.0; 
     
+    let mouseConnections = [];
+
     for (let a = 0; a < particles.length; a++) {
         let p = particles[a];
         
@@ -159,19 +161,28 @@ function animate() {
             }
         }
         
-        // Mouse connection lines
+        // Collect potential mouse connections
         let mdx = p.x - mouse.x;
         let mdy = p.y - mouse.y;
         let mDistance = Math.sqrt(mdx * mdx + mdy * mdy);
         
-        if (mDistance < 250) {
-            ctx.beginPath();
-            ctx.strokeStyle = '#ffffff'; 
-            ctx.globalAlpha = 0.5 * (1 - mDistance / 250);
-            ctx.moveTo(p.x, p.y);
-            ctx.lineTo(mouse.x, mouse.y);
-            ctx.stroke();
+        if (mDistance < 180) { // Reduced tracking radius
+            mouseConnections.push({ p: p, dist: mDistance });
         }
+    }
+    
+    // Sort and limit mouse connections to the closest 4 nodes
+    mouseConnections.sort((a, b) => a.dist - b.dist);
+    const MAX_CONNECTIONS = 4;
+    
+    for (let i = 0; i < Math.min(mouseConnections.length, MAX_CONNECTIONS); i++) {
+        let conn = mouseConnections[i];
+        ctx.beginPath();
+        ctx.strokeStyle = '#ffffff'; 
+        ctx.globalAlpha = 0.6 * (1 - conn.dist / 180);
+        ctx.moveTo(conn.p.x, conn.p.y);
+        ctx.lineTo(mouse.x, mouse.y);
+        ctx.stroke();
     }
     
     ctx.globalAlpha = 1.0;
