@@ -64,9 +64,16 @@ class Particle {
             this.vy += (forceDirectionY * force * 2.0 + swatY) / this.mass;
         }
         
-        let springStrength = 0.003;
         let dxOrigin = this.originX - this.x;
         let dyOrigin = this.originY - this.y;
+        let distFromOrigin = Math.sqrt(dxOrigin * dxOrigin + dyOrigin * dyOrigin);
+        
+        // Dynamic Spring Physics: 
+        // Base strength is very low for floaty movement.
+        // As it gets pushed further away (creating a void), the spring tension multiplies to snap it back.
+        let baseSpring = 0.003;
+        let tensionMultiplier = (distFromOrigin > 50) ? (distFromOrigin - 50) * 0.0005 : 0;
+        let springStrength = baseSpring + tensionMultiplier;
         
         this.vx += dxOrigin * springStrength;
         this.vy += dyOrigin * springStrength;
