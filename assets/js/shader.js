@@ -35,7 +35,7 @@ class Particle {
         this.y = y;
         this.originX = x;
         this.originY = y;
-        this.size = 3.0; // Slightly larger to clearly see the hexagon shape
+        this.size = 5.0; // Needs to be significantly larger for the hexagonal points to not sub-pixel blend into a circle
         this.vx = 0;
         this.vy = 0;
         this.mass = this.size * 2.0;
