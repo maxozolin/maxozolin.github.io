@@ -1,6 +1,5 @@
 const canvas = document.getElementById('shader-canvas');
 const ctx = canvas.getContext('2d');
-const headerContent = document.getElementById('header-content-wrapper');
 
 let particles = [];
 const nodeColor = 'rgba(248, 250, 252, 0.9)'; 
@@ -121,13 +120,6 @@ window.addEventListener('resize', resize);
 // Guarantee sizing kicks in after layout is complete
 window.addEventListener('load', resize);
 
-// Standalone Text Physics Variables
-let textX = 0;
-let textY = 0;
-let textVx = 0;
-let textVy = 0;
-const textMass = 15.0; // The text is heavier than grid nodes
-
 function animate() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
@@ -171,48 +163,6 @@ function animate() {
     for (let i = 0; i < particles.length; i++) {
         particles[i].update();
         particles[i].draw();
-    }
-    
-    // Apply Standalone Physics to the HTML Text
-    if (headerContent) {
-        let centerX = canvas.width / 2;
-        let centerY = canvas.height / 2;
-        
-        // Calculate mouse distance from the text's physical location
-        let mdx = (centerX + textX) - mouse.x;
-        let mdy = (centerY + textY) - mouse.y;
-        let mDistance = Math.sqrt(mdx * mdx + mdy * mdy);
-        
-        let textSwatRadius = 300; // Increased radius to ensure mouse affects the large text block
-        
-        if (mDistance < textSwatRadius) {
-            let forceDirectionX = mdx / mDistance;
-            let forceDirectionY = mdy / mDistance;
-            
-            // Same smooth repulsion curve
-            let force = Math.pow((textSwatRadius - mDistance) / textSwatRadius, 2);
-            
-            let swatX = mouse.vx * 0.2;
-            let swatY = mouse.vy * 0.2;
-
-            textVx += (forceDirectionX * force * 5.0 + swatX) / textMass;
-            textVy += (forceDirectionY * force * 5.0 + swatY) / textMass;
-        }
-        
-        // Spring physics pulling the text back to its center origin (0,0 offset)
-        let textSpringStrength = 0.02;
-        textVx += (0 - textX) * textSpringStrength;
-        textVy += (0 - textY) * textSpringStrength;
-        
-        // Friction/Damping
-        textVx *= 0.85;
-        textVy *= 0.85;
-        
-        textX += textVx;
-        textY += textVy;
-        
-        // Apply the physical movement via CSS
-        headerContent.style.transform = `translate(${textX}px, ${textY}px)`;
     }
     
     requestAnimationFrame(animate);
