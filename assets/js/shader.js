@@ -35,7 +35,7 @@ class Particle {
         this.y = y;
         this.originX = x;
         this.originY = y;
-        this.size = 2.0; 
+        this.size = 3.0; // Slightly larger to clearly see the hexagon shape
         this.vx = 0;
         this.vy = 0;
         this.mass = this.size * 2.0;
@@ -79,7 +79,19 @@ class Particle {
     
     draw() {
         ctx.beginPath();
-        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        const sides = 6;
+        for (let i = 0; i < sides; i++) {
+            // Pointy-topped hexagon
+            const angle = (i * 2 * Math.PI / sides) - (Math.PI / 2);
+            const px = this.x + this.size * Math.cos(angle);
+            const py = this.y + this.size * Math.sin(angle);
+            if (i === 0) {
+                ctx.moveTo(px, py);
+            } else {
+                ctx.lineTo(px, py);
+            }
+        }
+        ctx.closePath();
         ctx.fillStyle = nodeColor;
         ctx.fill();
     }
