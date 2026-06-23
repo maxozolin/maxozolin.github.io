@@ -1,5 +1,5 @@
 ---
-title: Max Ozolin
+title: Technical Lead. Startup CTO. Builder.
 ---
 # Welcome
 

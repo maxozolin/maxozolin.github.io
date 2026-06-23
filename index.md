@@ -1,6 +1,7 @@
 ---
-title: Max Ozolin
+title: Cybersecurity professional. Software Engineer & Technical Lead
 ---
+
 # Welcome
 
 Hi, I'm a developer/designer based in the universe. 
