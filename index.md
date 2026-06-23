@@ -1,5 +1,4 @@
 ---
-title: Cybersecurity professional. Software Engineer & Technical Lead
 ---
 
 # Welcome

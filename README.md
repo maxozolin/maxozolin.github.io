@@ -1,5 +1,4 @@
 ---
-title: Technical Lead. Startup CTO. Builder.
 ---
 # Welcome
 
